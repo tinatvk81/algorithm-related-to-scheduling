@@ -115,6 +115,125 @@ def print_status(resource, running, priority_queue, waiting_queue):
     print(f"waiting_queue:{[t.name for t in waiting_queue]}")
 
 
+def SJF(tasks, resources):
+    running = None
+    tasks.sort(key=lambda t: t.execution_time)
+    while len(tasks) > 0 or running is not None:
+        while running == None:
+            task = tasks.pop(0)
+            # task = heapq.heappop([(t.execution_time,t) for t in t])
+            if check_resources(task, resources):
+                allocate_resources(task, resources)
+                running = task
+            else:
+                add_to_waiting(task)
+
+        running.execution_time -= 1
+        print_status(resources, running, tasks, waiting_queue)
+        if running.execution_time == 0:
+            release_resources(running, resources)
+            running = None
+        changed = False
+        for i in range(len(waiting_queue)):
+            task = waiting_queue.pop(0)
+            # task = heapq.heappop(waiting_queue, key=lambda t: t.execution_time)
+            if check_resources(task, resources):
+                tasks.append(task)
+                changed = True
+            else:
+                add_to_waiting(task)
+        if changed:
+            tasks.sort(key=lambda t: t.execution_time)
+
+
+def FCFS(tasks, resources):
+    running = None
+    while len(tasks) > 0 or running is not None:
+        while running is None:
+            task = tasks.pop(0)
+            if check_resources(task, resources):
+                allocate_resources(task, resources)
+                running = task
+            else:
+                add_to_waiting(task)
+
+        running.execution_time -= 1
+        print_status(resources, running, tasks, waiting_queue)
+        if running.execution_time == 0:
+            release_resources(running, resources)
+            running = None
+
+        for i in range(len(waiting_queue)):
+            task = waiting_queue.pop(0)
+            if check_resources(task, resources):
+                tasks.append(task)
+            else:
+                add_to_waiting(task)
+    # while tasks:
+    #     current_task = tasks.pop(0)
+    #     if allocate_resources(current_task):
+    #         print("Executing task:", current_task["name"])
+    #         release_resources(current_task)
+    #     else:
+    #         print("Task", current_task["name"], "is waiting for resources")
+    #         tasks.append(current_task)
+
+
+def Round_Robin(tasks, resources, time_slice):
+    running = None
+    tasks.sort(key=lambda t: t.type)
+    time = 0
+    while len(tasks) > 0 or len(queue) > 0 or running is not None:
+        time += 1
+        idle = zero_resources(resources)
+        while running is None:
+            if idle or len(tasks) == 0:
+                task = queue.pop(0)
+                running = task
+                # print("if1")
+            else:
+                task = tasks.pop(0)
+                if check_resources(task, resources):
+                    allocate_resources(task, resources)
+                    running = task
+                    # print("if2")
+                else:
+                    add_to_waiting(task)
+        running.execution_time -= 1
+        print_status(resources, running, tasks, waiting_queue)
+        # print(f"queue:{[t.name for t in queue]}")
+        # print(running.execution_time)
+        # print("time")
+        # print(time)
+        if running.execution_time == 0:
+            release_resources(running, resources)
+            running = None
+            time = 0
+            # print("if3")
+
+        if time % time_slice == 0 and running is not None:
+            queue.append(running)
+            running = None
+            time = 0
+            # print("if4")
+
+        waiting_queue.sort(key=lambda t: need_resources(t, resources))
+        for i in range(len(waiting_queue)):
+            task = waiting_queue.pop(0)
+            if check_resources(task, resources):
+                tasks.append(task)
+            else:
+                task.waiting_time += 1
+                add_to_waiting(task)
+            if task.waiting_time == 20 * time_slice:
+                if task.type != 1:
+                    task.type -= 1
+    # for task in tasks:
+    #     execute_task(task)
+    # for i in range(len(waiting_queue)):
+    #     task = waiting_queue.popleft()
+    #     execute_task(task)
+
 
 def calculate_response_ratio(task):
     if task.waiting_time != 0:
@@ -122,6 +241,15 @@ def calculate_response_ratio(task):
         return response_ratio
     else:
         return task.type
+
+
+# def pop_waiting(tasks,resources):
+#     for i in range(len(waiting_queue)):
+#         task = waiting_queue.pop(0)
+#         if check_resources(task, resources):
+#             tasks.append(task)
+#         else:
+#             add_to_waiting(task)
 
 
 def HRRN(tasks, resources):
@@ -179,36 +307,6 @@ def HRRN(tasks, resources):
     # print("All tasks completed.")
 
 
-def SJF(tasks, resources):
-    running = None
-    tasks.sort(key=lambda t: t.execution_time)
-    while len(tasks) > 0 or running is not None:
-        while running == None:
-            task = tasks.pop(0)
-            # task = heapq.heappop([(t.execution_time,t) for t in t])
-            if check_resources(task, resources):
-                allocate_resources(task, resources)
-                running = task
-            else:
-                add_to_waiting(task)
-
-        running.execution_time -= 1
-        print_status(resources, running, tasks, waiting_queue)
-        if running.execution_time == 0:
-            release_resources(running, resources)
-            running = None
-        changed = False
-        for i in range(len(waiting_queue)):
-            task = waiting_queue.pop(0)
-            # task = heapq.heappop(waiting_queue, key=lambda t: t.execution_time)
-            if check_resources(task, resources):
-                tasks.append(task)
-                changed = True
-            else:
-                add_to_waiting(task)
-        if changed:
-            tasks.sort(key=lambda t: t.execution_time)
-
 if __name__ == "__main__":
     R1 = int(input("number of resources for R1: "))
     resources.append(R1)
@@ -226,11 +324,11 @@ if __name__ == "__main__":
     choose = input("choose the algorithm: ")
     if choose == 'SJF':
         SJF(tasks, resources)
-    # elif choose == 'FCFS':
-    #     # FCFS(tasks, resources)
-    # if choose == 'RR':
-    #     time_slice = int(input("time slice: "))
-    #     # Round_Robin(tasks, resources, time_slice)
+    elif choose == 'FCFS':
+        FCFS(tasks, resources)
+    if choose == 'RR':
+        time_slice = int(input("time slice: "))
+        Round_Robin(tasks, resources, time_slice)
     if choose == 'HRRN':
         # arrival_time = int(input("Arrival time: "))
         HRRN(tasks, resources)
